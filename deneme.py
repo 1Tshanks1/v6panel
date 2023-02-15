@@ -1,3 +1,2 @@
-from serial.tools import list_ports
+x = input()
 
-print(list_ports.comports())
