@@ -1,8 +1,10 @@
 from PySide6.QtWidgets import QApplication, QStackedWidget, QWidget, QApplication, QMainWindow, QPushButton, QVBoxLayout, QHBoxLayout, QMessageBox
 from PySide6.QtGui import QIcon, QPixmap, QColor, QFont, QPalette
-from PySide6.QtCore import QCoreApplication
+from PySide6.QtCore import QCoreApplication,QTimer
+import pyqtgraph as pg
 from firstpage import Ui_pageOne
-from secondpage import Ui_secondPage, Ui_secondthPage, Ui_secondthirdPage
+from secondpage import  Ui_secondthPage
+from thirdpage import Ui_thirdPage
 from backend import device
 from serial.tools import list_ports
 import sys
@@ -12,9 +14,10 @@ xbeeDevice1 = None
 xbeeDevice2 = None
 xbeeDevice3 = None
 count = 0
+remotecount = 0
+time = [0]
 
-
-class firstPage(QWidget, Ui_pageOne, Ui_secondPage):
+class firstPage(QWidget, Ui_pageOne):
 
     def __init__(self):
         super().__init__()
@@ -24,6 +27,7 @@ class firstPage(QWidget, Ui_pageOne, Ui_secondPage):
         self.reloadButton.clicked.connect(self.scanComs)
         self.nextButton.clicked.connect(self.nextPage)
         self.addButton.clicked.connect(self.add)
+        self.remoteDeviceAddButton.clicked.connect(self.addRemoteDevice)
 
     def scanComs(self):
         self.portBox.clear()
@@ -40,17 +44,12 @@ class firstPage(QWidget, Ui_pageOne, Ui_secondPage):
         elif count == 1:
             window.setCurrentIndex(window.currentIndex() + 1)
             secondPage.getData(second)
-        elif count == 2:
-            window.setCurrentIndex(window.currentIndex() + 2)
-        elif count == 3:
-            window.setCurrentIndex(window.currentIndex() + 2)
+            secondPage.getData2(second)
+            
 
     def add(self):
-        global xbeeDevice1
-        global xbeeDevice2
-        global xbeeDevice3
-        global count
-
+        global xbeeDevice1, xbeeDevice2, xbeeDevice3, count, remotecount, deviceNames, errormsg
+        deviceNames = []
         succesmsg = QMessageBox()
         succesmsg.setWindowTitle("Succesful")
         succesmsg.setText("You have succesfully connected a device.")
@@ -58,22 +57,15 @@ class firstPage(QWidget, Ui_pageOne, Ui_secondPage):
         errormsgsec.setWindowTitle("Error")
         errormsgsec.setText(
             "Flight name and Device name have to be longer than 1 character!!")
-        if count == 0 and len(self.flightName.text()) > 0 and len(self.deviceName.text()) > 0:
+        if count == 0 and len(self.flightName.text()) > 0 and len(self.deviceName.text()) > 0 and self.deviceName.text().lower() not in deviceNames:
 
+            deviceNames.append(self.deviceName.text().lower())
             xbeeDevice1 = device(self.flightName.text(), self.deviceName.text(
             ), self.portBox.currentText(), self.baudBox.currentText())
             count += 1
+            self.localBox.addItem(self.deviceName.text())
             succesmsg.exec()
-        elif count == 1 and len(self.flightName.text()) > 0 and len(self.deviceName.text()) > 0:
-            xbeeDevice2 = device(self.flightName.text(), self.deviceName.text(
-            ), self.portBox.currentText(), self.baudBox.currentText())
-            count += 1
-            succesmsg.exec()
-        elif count == 2 and len(self.flightName.text()) > 0 and len(self.deviceName.text()) > 0:
-            xbeeDevice3 = device(self.flightName.text(), self.deviceName.text(
-            ), self.portBox.currentText(), self.baudBox.currentText())
-            count += 1
-            succesmsg.exec()
+
         elif len(self.flightName.text()) == 0 or len(self.deviceName.text()) == 0:
             errormsgsec.exec()
 
@@ -84,43 +76,29 @@ class firstPage(QWidget, Ui_pageOne, Ui_secondPage):
                 "You have reached maximum number of devices!!\nYou cannot add a new device.")
             errormsg.exec()
 
+    def addRemoteDevice(self):
+        global remotecount, deviceNames, errormsg
+        errormsgsec = QMessageBox()
+        errormsgsec.setWindowTitle("Error")
+        errormsgsec.setText(
+            "Remote Device name have to be longer than 1 character!!")
+        if remotecount <= 2 and len(self.remoteDeviceName.text()) > 1:
 
-class secondPage(QWidget, Ui_secondPage):
+            xbeeDevice1.createRemoteDevice(self.remoteDeviceAdress.text())
+            remotecount += 1
+            if remotecount == 1:
+                xbeeDevice1.remoteDevice1.name = self.remoteDeviceName.text()
+            elif remotecount == 2:
+                xbeeDevice1.remoteDevice2.name = self.remoteDeviceName.text()
 
-    def __init__(self):
-        super().__init__()
-        self.setupUi(self)
+        elif len(self.remoteDeviceName.text()) == 0:
+            errormsgsec.exec()
 
-        self.nextButton.clicked.connect(self.nextPage)
-        self.backButton.clicked.connect(self.previousPage)
-        self.resButton.clicked.connect(self.getData)
-        self.setButton.clicked.connect(self.setData)
-
-    def setData(self):
-        xbeeDevice1.initialLatitude = xbeeDevice1.latitude
-        xbeeDevice1.initialLongtitude = xbeeDevice1.longtitude
-        xbeeDevice1.initialAltitude = xbeeDevice1.altitude
-        xbeeDevice1.initialVelocity = xbeeDevice1.velocity
-        print(xbeeDevice1.initialLatitude)
-        print(xbeeDevice1.initialLongtitude)
-        print(xbeeDevice1.initialAltitude)
-        print(xbeeDevice1.initialVelocity)
-
-    def getData(self):
-        xbeeDevice1.readData()
-        self.altitudeLabel.setText(xbeeDevice1.altitude)
-        self.longtitudeLabel.setText(xbeeDevice1.longtitude)
-        self.velocityLabel.setText(xbeeDevice1.velocity)
-        self.latitudeLabe.setText(xbeeDevice1.latitude)
-
-    def nextPage(self):
-        window.setCurrentIndex(window.currentIndex() + 3)
-
-    def previousPage(self):
-        window.setCurrentIndex(window.currentIndex() - 1)
+        else:
+            errormsg.exec()
 
 
-class secondthPage(QWidget, Ui_secondthPage):
+class secondPage(QWidget, Ui_secondthPage):
 
     def __init__(self):
         super().__init__()
@@ -130,88 +108,100 @@ class secondthPage(QWidget, Ui_secondthPage):
         self.backButton.clicked.connect(self.previousPage)
         self.resButton.clicked.connect(self.getData)
         self.setButton.clicked.connect(self.setData)
-        self.nextButton.clicked.connect(self.nextPage)
-        self.backButton.clicked.connect(self.previousPage)
+        self.resButton_2.clicked.connect(self.getData2)
+        self.setButton_2.clicked.connect(self.setData2)
 
     def setData(self):
-        xbeeDevice1.initialLatitude = xbeeDevice1.latitude
-        xbeeDevice1.initialLongtitude = xbeeDevice1.longtitude
-        xbeeDevice1.initialAltitude = xbeeDevice1.altitude
-        xbeeDevice1.initialVelocity = xbeeDevice1.velocity
-        xbeeDevice2.initialLatitude = xbeeDevice2.latitude
-        xbeeDevice2.initialLongtitude = xbeeDevice2.longtitude
-        xbeeDevice2.initialAltitude = xbeeDevice2.altitude
-        xbeeDevice2.initialVelocity = xbeeDevice2.velocity
+
+        xbeeDevice1.remoteDevice1.initialLatitude = xbeeDevice1.remoteDevice1.latitude[-1]
+        xbeeDevice1.remoteDevice1.initialLongtitude = xbeeDevice1.remoteDevice1.longtitude[-1]
+        xbeeDevice1.remoteDevice1.initialAltitude = xbeeDevice1.remoteDevice1.altitude[-1]
+        xbeeDevice1.remoteDevice1.initialVelocity = xbeeDevice1.remoteDevice1.velocity[-1]
+
+    def setData2():
+        xbeeDevice1.remoteDevice2.initialLatitude = xbeeDevice1.remoteDevice2.latitude[-1]
+        xbeeDevice1.remoteDevice2.initialLongtitude = xbeeDevice1.remoteDevice2.longtitude[-1]
+        xbeeDevice1.remoteDevice2.initialAltitude = xbeeDevice1.remoteDevice2.altitude[-1]
+        xbeeDevice1.remoteDevice2.initialVelocity = xbeeDevice1.remoteDevice2.velocity[-1]
 
     def getData(self):
-        xbeeDevice1.readData()
-        self.altitudeLabel.setText(xbeeDevice1.altitude)
-        self.longtitudeLabel.setText(xbeeDevice1.longtitude)
-        self.velocityLabel.setText(xbeeDevice1.velocity)
-        self.latitudeLabel.setText(xbeeDevice1.latitude)
-        xbeeDevice2.readData()
-        self.altitudeLabel_2.setText(xbeeDevice2.altitude)
-        self.longtitudeLabel_2.setText(xbeeDevice2.longtitude)
-        self.velocityLabel_2.setText(xbeeDevice2.velocity)
-        self.latitudeLabel_2.setText(xbeeDevice2.latitude)
 
-    def nextPage(self):
-        window.setCurrentIndex(window.currentIndex() + 2)
+        xbeeDevice1.readData(xbeeDevice1.remoteDevice1)
+        self.altitudeLabel.setText(xbeeDevice1.remoteDevice1.altitude[-1])
+        self.longtitudeLabel.setText(
+            xbeeDevice1.remoteDevice1.longtitude[-1])
+        self.velocityLabel.setText(xbeeDevice1.remoteDevice1.velocity[-1])
+        self.latitudeLabel.setText(xbeeDevice1.remoteDevice1.latitude[-1])
 
-    def previousPage(self):
-        window.setCurrentIndex(window.currentIndex() - 2)
-
-
-class secondthirdPage(QWidget, Ui_secondthirdPage):
-
-    def __init__(self):
-        super().__init__()
-        self.setupUi(self)
-
-        self.nextButton.clicked.connect(self.nextPage)
-        self.backButton.clicked.connect(self.previousPage)
-        self.resButton.clicked.connect(self.getData)
-        self.setButton.clicked.connect(self.setData)
-        self.nextButton.clicked.connect(self.nextPage)
-        self.backButton.clicked.connect(self.previousPage)
-
-    def setData(self):
-        xbeeDevice1.initialLatitude = xbeeDevice1.latitude
-        xbeeDevice1.initialLongtitude = xbeeDevice1.longtitude
-        xbeeDevice1.initialAltitude = xbeeDevice1.altitude
-        xbeeDevice1.initialVelocity = xbeeDevice1.velocity
-        xbeeDevice2.initialLatitude = xbeeDevice2.latitude
-        xbeeDevice2.initialLongtitude = xbeeDevice2.longtitude
-        xbeeDevice2.initialAltitude = xbeeDevice2.altitude
-        xbeeDevice2.initialVelocity = xbeeDevice2.velocity
-        xbeeDevice3.initialLatitude = xbeeDevice3.latitude
-        xbeeDevice3.initialLongtitude = xbeeDevice3.longtitude
-        xbeeDevice3.initialAltitude = xbeeDevice3.altitude
-        xbeeDevice3.initialVelocity = xbeeDevice3.velocity
-
-    def getData(self):
-        xbeeDevice1.readData()
-        self.altitudeLabel.setText(xbeeDevice1.altitude)
-        self.longtitudeLabel.setText(xbeeDevice1.longtitude)
-        self.velocityLabel.setText(xbeeDevice1.velocity)
-        self.latitudeLabel.setText(xbeeDevice1.latitude)
-        xbeeDevice2.readData()
-        self.altitudeLabel_2.setText(xbeeDevice2.altitude)
-        self.longtitudeLabel_2.setText(xbeeDevice2.longtitude)
-        self.velocityLabel_2.setText(xbeeDevice2.velocity)
-        self.latitudeLabel_2.setText(xbeeDevice2.latitude)
-        xbeeDevice3.readData()
-        self.altitudeLabel_3.setText(xbeeDevice3.altitude)
-        self.longtitudeLabel_3.setText(xbeeDevice3.longtitude)
-        self.velocityLabel_3.setText(xbeeDevice3.velocity)
-        self.latitudeLabel_3.setText(xbeeDevice3.latitude)
+    def getData2(self):
+        self.devicename2.setText(xbeeDevice1.remoteDevice2.name)
+        xbeeDevice1.readData(xbeeDevice1.remoteDevice2)
+        self.altitudeLabel_2.setText(
+            xbeeDevice1.remoteDevice2.altitude[-1])
+        self.longtitudeLabel_2.setText(
+            xbeeDevice1.remoteDevice2.longtitude[-1])
+        self.velocityLabel_2.setText(
+            xbeeDevice1.remoteDevice2.velocity[-1])
+        self.latitudeLabel_2.setText(
+            xbeeDevice1.remoteDevice2.latitude[-1])
 
     def nextPage(self):
         window.setCurrentIndex(window.currentIndex() + 1)
 
     def previousPage(self):
-        window.setCurrentIndex(window.currentIndex() - 3)
+        window.setCurrentIndex(window.currentIndex() - 1)
 
+class thirdPage(QWidget, Ui_thirdPage):
+
+    def __init__(self):
+        super().__init__()
+        self.setupUi(self)
+        
+
+        self.timer=QTimer()
+        self.timer.setInterval(1000)
+        self.timer.timeout.connect(self.draw)
+        self.startButton.clicked.connect(self.start)
+        self.nextButton.clicked.connect(self.nextPage)
+        self.backButton.clicked.connect(self.previousPage)
+
+        
+
+    def start(self):
+        self.timer.start()
+
+    
+    def draw(self):
+        global time
+        pen = pg.mkPen(color=(255, 0, 0),width=1)
+        
+        xbeeDevice1.readData(xbeeDevice1.remoteDevice1)
+        xbeeDevice1.readData(xbeeDevice1.remoteDevice2)
+        time.append(time[-1] + 1)
+        
+        
+        self.device1AT.setLabel('left', 'Altitude ', color='white', size=30)
+        self.device1AT.setLabel('bottom', 'Time', color='white', size=30)
+
+        self.device2AT.setLabel('left', 'Altitude ', color='white', size=30)
+        self.device2AT.setLabel('bottom', 'Time', color='white', size=30)
+
+        self.device2VT.setLabel('left', 'Velocity ', color='white', size=30)
+        self.device2VT.setLabel('bottom', 'Time', color='white', size=30)
+
+        self.device1VT.setLabel('left', 'Velocity ', color='white', size=30)
+        self.device1VT.setLabel('bottom', 'Time', color='white', size=30)
+
+        self.device1AT.plot(time, xbeeDevice1.remoteDevice1.altitude,name="Data 1" ,pen=pen)
+        self.device1VT.plot(time, xbeeDevice1.remoteDevice1.velocity,name="Data 1" ,pen=pen)
+        self.device2VT.plot(time, xbeeDevice1.remoteDevice2.velocity,name="Data 1" ,pen=pen)
+        self.device2AT.plot(time, xbeeDevice1.remoteDevice2.altitude,name="Data 1" ,pen=pen)
+
+    def nextPage(self):
+        window.setCurrentIndex(window.currentIndex() + 1)
+
+    def previousPage(self):
+        window.setCurrentIndex(window.currentIndex() - 1)
 
 if __name__ == "__main__":
 
@@ -219,15 +209,15 @@ if __name__ == "__main__":
     window = QStackedWidget()
     first = firstPage()
     second = secondPage()
-    secondth = secondthPage()
-    secondthird = secondthirdPage()
+    third = thirdPage()
+    
+
     window.setWindowTitle("Versiyon 6 Yer İstasyonu")
-    window.setWindowIcon(QIcon("logo.jpeg"))
+    window.setWindowIcon(QIcon("logo.png"))
 
     window.addWidget(first)
     window.addWidget(second)
-    window.addWidget(secondth)
-    window.addWidget(secondthird)
+    window.addWidget(third)
 
     window.showMaximized()
 
