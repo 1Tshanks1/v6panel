@@ -107,6 +107,7 @@ class Ui_pageOne(object):
         self.baudBox.addItem("")
         self.baudBox.addItem("")
         self.baudBox.addItem("")
+        self.baudBox.addItem("")
         self.baudBox.setObjectName(u"baudBox")
         self.baudBox.setFont(font1)
 
@@ -243,6 +244,7 @@ class Ui_pageOne(object):
         self.baudBox.setItemText(4, QCoreApplication.translate("pageOne", u"28800", None))
         self.baudBox.setItemText(5, QCoreApplication.translate("pageOne", u"38400", None))
         self.baudBox.setItemText(6, QCoreApplication.translate("pageOne", u"57600", None))
+        self.baudBox.setItemText(7, QCoreApplication.translate("pageOne", u"115200", None))
 
         self.label_7.setText(QCoreApplication.translate("pageOne", u"Remote Device Name", None))
         self.label_5.setText(QCoreApplication.translate("pageOne", u"Remote Device 64Bit Adress", None))
